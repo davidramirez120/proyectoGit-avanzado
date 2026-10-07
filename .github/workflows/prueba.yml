@@ -1,4 +1,4 @@
-name: Prueba de tokens
+name: Prueba de tokens - v2
 
 on:
   push:
