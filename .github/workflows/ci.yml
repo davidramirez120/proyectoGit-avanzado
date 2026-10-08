@@ -10,24 +10,30 @@ on:
       - develop
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-readme:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Añadir feature al README
         run: |
-          echo "Añadida feature: ${{ github.head_ref || github.ref_name }}" >> README.md
+          echo "Añadida feature: ${{ github.event.pull_request.head.ref || github.ref_name }}" >> README.md
 
       - name: Guardar cambios
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git commit -m "Actualizar README desde CI" || echo "No hay cambios"
+          git commit -m "Actualizar README desde CI [skip ci]" || echo "No hay cambios"
           git push
 
   validate-dev:
