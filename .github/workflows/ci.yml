@@ -1,0 +1,54 @@
+name: CI - Develop
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+
+      - name: Añadir feature al README
+        run: |
+          echo "Añadida feature: ${{ github.event.pull_request.head.ref || github.ref_name }}" >> README.md
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Actualizar README desde CI [skip ci]" || echo "No hay cambios"
+          git push
+
+  validate-dev:
+    needs: update-readme
+    runs-on: self-hosted
+
+    steps:
+      - name: Validar DEV_TOKEN
+        shell: cmd
+        env:
+          DEV_TOKEN: ${{ secrets.DEV_TOKEN }}
+        run: |
+          if "%DEV_TOKEN%"=="%LOCAL_DEV_TOKEN%" (
+            echo Los tokens de desarrollo coinciden correctamente.
+          ) else (
+            echo Los tokens de desarrollo NO coinciden.
+            exit /b 1
+          )

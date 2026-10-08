@@ -1,0 +1,60 @@
+name: CD - Main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Incrementar versión
+        run: |
+          VERSION=$(grep -o 'AppVersion-[0-9]\+' README.md | head -1 | cut -d'-' -f2)
+          NEW_VERSION=$((VERSION + 1))
+          sed -i "s/AppVersion-$VERSION/AppVersion-$NEW_VERSION/" README.md
+          echo "Nueva versión: AppVersion-$NEW_VERSION"
+
+      - name: Añadir fecha y hora
+        run: |
+          echo "Actualizado: $(date '+%Y-%m-%d %H:%M:%S')" >> README.md
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Actualizar versión de la aplicación [skip ci]" || echo "No hay cambios"
+          git push
+
+  validate-prod:
+    needs: bump-version
+    runs-on: self-hosted
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Validar PROD_TOKEN
+        shell: cmd
+        env:
+          PROD_TOKEN: ${{ secrets.PROD_TOKEN }}
+        run: |
+          if "%PROD_TOKEN%"=="%LOCAL_PROD_TOKEN%" (
+            echo Los tokens de producción coinciden correctamente.
+          ) else (
+            echo Los tokens de producción NO coinciden.
+            exit /b 1
+          )
