@@ -7,3 +7,4 @@ Añadida feature: feature/mi-feature-3
 Añadida feature: develop
 Añadida feature: develop
 Actualizado: 2026-10-09 16:59:41
+Añadida feature: main
